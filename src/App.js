@@ -17,8 +17,8 @@ const CI = {
   red: RGB(190, 13, 62), // Header/CTA
   blueDark: RGB(0, 71, 103), // Buttons/Tabellenkopf
   green: RGB(66, 126, 91), // Fondsguthaben-Linie
-  grey: "#6E6E6E",
   greyLine: RGB(100, 109, 116),
+  grey: "#6E6E6E",
   white: "#FFFFFF",
   bg: "#F6F7F9",
 };
@@ -36,7 +36,12 @@ const card = {
   boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
   padding: 16,
 };
-const label = { fontSize: 12, color: CI.grey, marginBottom: 6 };
+const label = {
+  fontSize: 12,
+  color: CI.grey,
+  marginBottom: 6,
+  fontWeight: 600,
+};
 const input = {
   padding: "8px 10px",
   border: "1px solid #d0d5dd",
@@ -62,54 +67,13 @@ const btnSecondary = {
   cursor: "pointer",
 };
 
-function Stepper({ step, setStep }) {
-  const steps = ["Hinführung", "Einwände", "Rechner"];
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 8,
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 12,
-      }}
-    >
-      {steps.map((s, i) => {
-        const idx = i + 1;
-        const active = step === idx;
-        return (
-          <div
-            key={s}
-            style={{ display: "flex", alignItems: "center", gap: 8 }}
-          >
-            <div
-              style={{
-                background: active ? CI.red : "#e7e8ec",
-                color: active ? "#fff" : "#111",
-                borderRadius: 14,
-                padding: "6px 12px",
-                fontWeight: active ? 700 : 500,
-                minWidth: 90,
-                textAlign: "center",
-              }}
-            >
-              {idx}. {s}
-            </div>
-            {idx < steps.length && (
-              <div style={{ width: 22, height: 2, background: "#d7d8de" }} />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function Step1Intro({ onNext }) {
+// ---------- Intro (Video oder Bild) ----------
+function HeroFamilyVideo({ onNext }) {
+  const videoRef = React.useRef(null);
   const [videoOn, setVideoOn] = useState(true);
+
   return (
     <div style={{ ...card }}>
-      {/* Media-Bereich: Video (Standard) mit Bild-Fallback */}
       <div
         style={{
           borderRadius: 16,
@@ -120,6 +84,7 @@ function Step1Intro({ onNext }) {
       >
         {videoOn ? (
           <video
+            ref={videoRef}
             autoPlay
             muted
             loop
@@ -132,12 +97,9 @@ function Step1Intro({ onNext }) {
             }}
             poster="https://images.pexels.com/photos/7578935/pexels-photo-7578935.jpeg"
           >
+            {/* Bitte hier ein echtes Haus/Family-Video hinterlegen */}
             <source
               src="https://videos.pexels.com/video-files/4790061/4790061-uhd_3840_2160_25fps.mp4"
-              type="video/mp4"
-            />
-            <source
-              src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
               type="video/mp4"
             />
           </video>
@@ -153,6 +115,7 @@ function Step1Intro({ onNext }) {
             }}
           />
         )}
+
         <button
           onClick={() => setVideoOn((v) => !v)}
           style={{
@@ -190,13 +153,14 @@ function Step1Intro({ onNext }) {
 
       <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
         <button onClick={onNext} style={btnSecondary}>
-          Ja, zeig mir wie das geht
+          Weiter
         </button>
       </div>
     </div>
   );
 }
 
+// ---------- Einwände als Sprechblasen ----------
 const EINWAENDE = [
   {
     title: "Ich zahle doch schon Miete, das reicht.",
@@ -212,7 +176,8 @@ const EINWAENDE = [
   },
   {
     title: "Fonds sind doch unsicher.",
-    body: "Langfristig bieten Fonds Renditechancen. Du bleibst liquide und kannst bei Bedarf anpassen oder pausieren.",
+    body: "Langfristig bieten Fonds Renditechancen. Zusätzlich siehst du hier das Renditedreieck als Orientierung.",
+    showTriangle: true,
   },
   {
     title: "Ich weiß nicht, ob das zu mir passt.",
@@ -224,53 +189,108 @@ function Step2Objections({ onNext }) {
   const [active, setActive] = useState(0);
   return (
     <div style={{ ...card }}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {/* Einwand-Sprechblasen */}
+      <div
+        style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}
+      >
         {EINWAENDE.map((e, i) => (
-          <button
+          <div
             key={e.title}
             onClick={() => setActive(i)}
-            style={{
-              background: i === active ? CI.blueDark : "#eef1f5",
-              color: i === active ? "#fff" : "#111",
-              border: 0,
-              borderRadius: 14,
-              padding: "8px 12px",
-              cursor: "pointer",
-              fontWeight: 700,
-            }}
+            style={{ cursor: "pointer" }}
           >
-            {i + 1}. {e.title}
-          </button>
+            <div
+              style={{
+                background: i === active ? CI.red : "#eef1f5",
+                color: i === active ? "#fff" : "#111",
+                padding: "10px 12px",
+                borderRadius: 16,
+                position: "relative",
+                fontWeight: 700,
+              }}
+            >
+              {i + 1}. {e.title}
+              <span
+                style={{
+                  position: "absolute",
+                  left: 16,
+                  bottom: -8,
+                  width: 0,
+                  height: 0,
+                  borderLeft: "8px solid transparent",
+                  borderRight: "8px solid transparent",
+                  borderTop: `8px solid ${i === active ? CI.red : "#eef1f5"}`,
+                }}
+              />
+            </div>
+          </div>
         ))}
       </div>
 
+      {/* Antwort-Sprechblase */}
       <div
         style={{
-          marginTop: 12,
-          padding: 16,
-          borderRadius: 16,
           background: "#fbfcfd",
           border: "1px solid #e9ecf1",
+          borderRadius: 16,
+          padding: 16,
+          position: "relative",
         }}
       >
-        <div style={{ fontWeight: 800, color: CI.red, marginBottom: 8 }}>
+        <div style={{ fontWeight: 800, color: CI.red, marginBottom: 6 }}>
           {EINWAENDE[active].title}
         </div>
         <div style={{ color: CI.grey, fontSize: 15 }}>
           {EINWAENDE[active].body}
         </div>
+        <span
+          style={{
+            position: "absolute",
+            left: 26,
+            top: -8,
+            width: 0,
+            height: 0,
+            borderLeft: "8px solid transparent",
+            borderRight: "8px solid transparent",
+            borderBottom: "8px solid #fbfcfd",
+          }}
+        />
+        {EINWAENDE[active].showTriangle && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 13, color: CI.grey, marginBottom: 6 }}>
+              Renditedreieck (DAI / MSCI World):
+            </div>
+            <div
+              style={{
+                height: 420,
+                border: "1px solid #e9ecf1",
+                borderRadius: 12,
+                overflow: "hidden",
+              }}
+            >
+              <iframe
+                title="Renditedreieck"
+                src="https://www.dai.de/fileadmin/user_upload/221231_MSCI_World-Rendite-Dreick_Web.pdf"
+                style={{ width: "100%", height: "100%", border: 0 }}
+              />
+            </div>
+            <div style={{ marginTop: 6 }}>
+              <a
+                href="https://www.dai.de/fileadmin/user_upload/221231_MSCI_World-Rendite-Dreick_Web.pdf"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: CI.blueDark, fontWeight: 700 }}
+              >
+                In neuem Tab öffnen
+              </a>
+            </div>
+          </div>
+        )}
       </div>
 
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: 14,
-        }}
+        style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}
       >
-        <div style={{ color: CI.grey, fontSize: 13 }}>
-          Klicke die Einwände an – und lass uns dann rechnen.
-        </div>
         <button onClick={onNext} style={btnPrimary}>
           Weiter zum Rechner
         </button>
@@ -285,7 +305,7 @@ export default function App() {
   // Eingaben
   const [warmmiete, setWarmmiete] = useState(1000);
   const [kaufpreis, setKaufpreis] = useState(400000);
-  const [bruttoRendite, setBruttoRendite] = useState(6.0);
+  const [rendite, setRendite] = useState(6.0); // Renditeerwartung
 
   // Konstanten
   const zinssatz = 0.035; // 3,5% p.a.
@@ -300,9 +320,9 @@ export default function App() {
   );
   const monatlDifferenz = Math.max(0, monatsrateFinanzierung - warmmiete);
 
-  // Simulation
+  // Simulation (live, ohne „Ergebnis anzeigen“-Button)
   const results = useMemo(() => {
-    const r_annual = (bruttoRendite || 0) / 100;
+    const r_annual = (rendite || 0) / 100;
     const r_month = Math.pow(1 + r_annual, 1 / 12) - 1;
     const kosten_month = kostenProzentPA / 12;
 
@@ -327,7 +347,7 @@ export default function App() {
     }
     return arr;
   }, [
-    bruttoRendite,
+    rendite,
     kostenProzentPA,
     stueckkostenPA,
     inflationsrate,
@@ -335,6 +355,7 @@ export default function App() {
     kaufpreis,
   ]);
 
+  // Vollständiger PDF-Export (wie gehabt)
   const exportPDF = () => {
     try {
       // Seite 1 Portrait
@@ -367,7 +388,7 @@ export default function App() {
       y += 20;
       pdf.text(`Kaufpreis: ${nf.format(kaufpreis)} €`, margin, y);
       y += 20;
-      pdf.text(`Bruttorendite: ${bruttoRendite.toFixed(1)} % p.a.`, margin, y);
+      pdf.text(`Renditeerwartung: ${rendite.toFixed(1)} % p.a.`, margin, y);
       y += 20;
       pdf.text(
         `Monatliche Finanzierungsrate: ${fmtEUR(monatsrateFinanzierung)}`,
@@ -554,6 +575,79 @@ export default function App() {
     }
   };
 
+  // Mini-PDF für Teilen + E-Mail-Fallback
+  const generatePdfBlob = () => {
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+    });
+    pdf.setFillColor(190, 13, 62);
+    pdf.rect(0, 0, pdf.internal.pageSize.getWidth(), 64, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(16);
+    pdf.text(
+      "Finanzieren auf Probe",
+      pdf.internal.pageSize.getWidth() / 2,
+      40,
+      { align: "center" }
+    );
+    pdf.setTextColor(0);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    pdf.text("Automatisch erzeugte Zusammenfassung im Anhang.", 32, 100);
+    return pdf.output("blob");
+  };
+
+  const handleContact = async (isGo) => {
+    const subject = isGo
+      ? "Finanzieren auf Probe - lass es uns machen"
+      : "Finanzieren auf Probe - weitere Fragen";
+    const body = isGo
+      ? "Hi, ich drohe mit Abschluss weil ich die Sache cool finde. Nimm bitte mit mir Kontakt auf."
+      : "Hi, ich finde das cool - Habe aber noch Fragen. Nimm bitte mit mir Kontakt auf";
+
+    try {
+      const blob = generatePdfBlob();
+      const file = new File(
+        [blob],
+        `Finanzieren_auf_Probe_${new Date().toISOString().slice(0, 10)}.pdf`,
+        { type: "application/pdf" }
+      );
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({ files: [file] })
+      ) {
+        await navigator.share({
+          title: "Finanzieren auf Probe",
+          text: body,
+          files: [file],
+        });
+        return;
+      }
+    } catch {}
+
+    // Fallback Desktop: Download + mailto (Anhänge via mailto sind nicht standardisiert)
+    try {
+      const blob = generatePdfBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Finanzieren_auf_Probe_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    } catch {}
+
+    const mailto = `mailto:?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+  };
+
   return (
     <div style={{ padding: 20, maxWidth: 1100, margin: "0 auto" }}>
       {/* Header */}
@@ -581,11 +675,11 @@ export default function App() {
         </div>
       </div>
 
-      <Stepper step={step} setStep={setStep} />
-
-      {step === 1 && <Step1Intro onNext={() => setStep(2)} />}
+      {/* Step 1 & 2 */}
+      {step === 1 && <HeroFamilyVideo onNext={() => setStep(2)} />}
       {step === 2 && <Step2Objections onNext={() => setStep(3)} />}
 
+      {/* Step 3: Rechner */}
       {step === 3 && (
         <div style={{ display: "grid", gap: 16 }}>
           {/* Eingaben */}
@@ -598,11 +692,11 @@ export default function App() {
               }}
             >
               <div>
-                <div style={label}>Deine Warmmiete (€ / Monat)</div>
+                <div style={label}>Deine aktuelle Warmmiete (€ / Monat)</div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <input
                     type="range"
-                    min={400}
+                    min={0}
                     max={2000}
                     step={10}
                     value={warmmiete}
@@ -614,16 +708,18 @@ export default function App() {
                     step={10}
                     value={warmmiete}
                     onChange={(e) => setWarmmiete(Number(e.target.value))}
-                    style={{ ...input, width: 110 }}
+                    style={{ ...input, width: 120 }}
                   />
                 </div>
               </div>
               <div>
-                <div style={label}>Dein Kaufpreis (€)</div>
+                <div style={label}>
+                  Aktueller Kaufpreis einer Wunschimmobilie (€)
+                </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   <input
                     type="range"
-                    min={200000}
+                    min={100000}
                     max={1500000}
                     step={10000}
                     value={kaufpreis}
@@ -634,7 +730,7 @@ export default function App() {
                     type="number"
                     value={kaufpreis}
                     onChange={(e) => setKaufpreis(Number(e.target.value))}
-                    style={{ ...input, width: 160 }}
+                    style={{ ...input, width: 170 }}
                   />
                 </div>
               </div>
@@ -649,22 +745,22 @@ export default function App() {
               }}
             >
               <div>
-                <div style={label}>Bruttorendite-Annahme (% p.a.)</div>
+                <div style={label}>Renditeerwartung (% p.a.)</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <input
                     type="range"
                     min={0}
                     max={15}
                     step={0.1}
-                    value={bruttoRendite}
-                    onChange={(e) => setBruttoRendite(Number(e.target.value))}
+                    value={rendite}
+                    onChange={(e) => setRendite(Number(e.target.value))}
                     style={{ width: "100%" }}
                   />
                   <input
                     type="number"
                     step={0.1}
-                    value={bruttoRendite}
-                    onChange={(e) => setBruttoRendite(Number(e.target.value))}
+                    value={rendite}
+                    onChange={(e) => setRendite(Number(e.target.value))}
                     style={{ ...input, width: 80 }}
                   />
                 </div>
@@ -673,13 +769,13 @@ export default function App() {
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <div>
                   <div style={label}>Monatliche Finanzierungsrate</div>
-                  <div style={{ ...input, background: "#f7f7f9", width: 140 }}>
+                  <div style={{ ...input, background: "#f7f7f9", width: 160 }}>
                     {fmtEUR(monatsrateFinanzierung)}
                   </div>
                 </div>
                 <div>
                   <div style={label}>Monatliche Sparrate</div>
-                  <div style={{ ...input, background: "#f7f7f9", width: 140 }}>
+                  <div style={{ ...input, background: "#f7f7f9", width: 160 }}>
                     {fmtEUR(monatlDifferenz)}
                   </div>
                 </div>
@@ -694,17 +790,6 @@ export default function App() {
                 marginTop: 16,
               }}
             >
-              <button
-                style={btnPrimary}
-                onClick={() =>
-                  window.scrollTo({
-                    top: document.body.scrollHeight,
-                    behavior: "smooth",
-                  })
-                }
-              >
-                Ergebnis anzeigen
-              </button>
               <button style={btnSecondary} onClick={exportPDF}>
                 PDF exportieren
               </button>
@@ -870,7 +955,32 @@ export default function App() {
             </div>
           </div>
 
-          {/* CTA */}
+          {/* Kontakt-CTA */}
+          <div style={{ ...card }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                justifyContent: "center",
+              }}
+            >
+              <button style={btnSecondary} onClick={() => handleContact(false)}>
+                Ich habe noch Fragen: Nimm mit mir Kontakt auf
+              </button>
+              <button style={btnPrimary} onClick={() => handleContact(true)}>
+                Ich finde das cool – Genau das möchte ich
+              </button>
+            </div>
+            <div style={{ fontSize: 12, color: CI.grey, marginTop: 8 }}>
+              Hinweis: Browser erlauben keine garantierten E-Mail-Anhänge via{" "}
+              <code>mailto:</code>. Auf Mobilgeräten teilen wir das PDF direkt
+              in die Mail-App (wenn unterstützt), am Desktop laden wir die Datei
+              herunter und öffnen das E-Mail-Programm mit Betreff & Text.
+            </div>
+          </div>
+
+          {/* Abschlussband */}
           <div
             style={{
               background: CI.red,
@@ -887,7 +997,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Footer Nav */}
+      {/* Footer Navigation */}
       <div
         style={{
           display: "flex",
