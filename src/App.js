@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -11,93 +11,309 @@ import {
 } from "recharts";
 import { jsPDF } from "jspdf";
 
-// ===== Farben (ALH-CI) =====
+// ===== ALH Corporate Design =====
 const RGB = (r, g, b) => `rgb(${r}, ${g}, ${b})`;
 const CI = {
   red: RGB(190, 13, 62), // Header/CTA
-  blueDark: RGB(0, 71, 103), // Tabellenkopf, PDF-Button
-  greenLine: RGB(66, 126, 91), // Fondsguthaben (Linie)
-  greyLine: RGB(100, 109, 116), // Kumulierte Sparrate (Linie)
+  blueDark: RGB(0, 71, 103), // Buttons/Tabellenkopf
+  green: RGB(66, 126, 91), // Fondsguthaben-Linie
   grey: "#6E6E6E",
+  greyLine: RGB(100, 109, 116),
   white: "#FFFFFF",
+  bg: "#F6F7F9",
 };
 
-// ===== Formatierer & Styles =====
 const nf = new Intl.NumberFormat("de-DE");
 const fmtEUR = (v) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(
     v || 0
   );
 
-const labelStyle = { fontSize: 12, color: CI.grey, marginBottom: 6 };
-const inputStyle = {
-  padding: "8px 10px",
-  border: "1px solid #d0d5dd",
-  borderRadius: 10,
-  fontSize: 14,
-};
-const cardStyle = {
-  background: "#fff",
+const card = {
+  background: CI.white,
   border: "1px solid rgba(227,6,19,0.12)",
   borderRadius: 18,
   boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
   padding: 16,
 };
-const buttonPrimary = {
+const label = { fontSize: 12, color: CI.grey, marginBottom: 6 };
+const input = {
+  padding: "8px 10px",
+  border: "1px solid #d0d5dd",
+  borderRadius: 10,
+  fontSize: 14,
+};
+const btnPrimary = {
   background: CI.red,
   color: "#fff",
   border: 0,
   borderRadius: 16,
   padding: "10px 14px",
-  fontWeight: 600,
+  fontWeight: 700,
   cursor: "pointer",
 };
-const buttonPdf = {
+const btnSecondary = {
   background: CI.blueDark,
   color: "#fff",
   border: 0,
   borderRadius: 16,
   padding: "10px 14px",
-  fontWeight: 600,
+  fontWeight: 700,
   cursor: "pointer",
 };
 
+function Stepper({ step, setStep }) {
+  const steps = ["Hinführung", "Einwände", "Rechner"];
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 12,
+      }}
+    >
+      {steps.map((s, i) => {
+        const idx = i + 1;
+        const active = step === idx;
+        return (
+          <div
+            key={s}
+            style={{ display: "flex", alignItems: "center", gap: 8 }}
+          >
+            <div
+              style={{
+                background: active ? CI.red : "#e7e8ec",
+                color: active ? "#fff" : "#111",
+                borderRadius: 14,
+                padding: "6px 12px",
+                fontWeight: active ? 700 : 500,
+                minWidth: 90,
+                textAlign: "center",
+              }}
+            >
+              {idx}. {s}
+            </div>
+            {idx < steps.length && (
+              <div style={{ width: 22, height: 2, background: "#d7d8de" }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Step1Intro({ onNext }) {
+  const [videoOn, setVideoOn] = useState(true);
+  return (
+    <div style={{ ...card }}>
+      {/* Media-Bereich: Video (Standard) mit Bild-Fallback */}
+      <div
+        style={{
+          borderRadius: 16,
+          overflow: "hidden",
+          marginBottom: 12,
+          position: "relative",
+        }}
+      >
+        {videoOn ? (
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            style={{
+              width: "100%",
+              height: 260,
+              objectFit: "cover",
+              display: "block",
+            }}
+            poster="https://images.pexels.com/photos/7578935/pexels-photo-7578935.jpeg"
+          >
+            <source
+              src="https://videos.pexels.com/video-files/4790061/4790061-uhd_3840_2160_25fps.mp4"
+              type="video/mp4"
+            />
+            <source
+              src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+              type="video/mp4"
+            />
+          </video>
+        ) : (
+          <img
+            src="https://images.pexels.com/photos/7578935/pexels-photo-7578935.jpeg"
+            alt="Familie vorm Haus"
+            style={{
+              width: "100%",
+              height: 260,
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        )}
+        <button
+          onClick={() => setVideoOn((v) => !v)}
+          style={{
+            position: "absolute",
+            right: 12,
+            bottom: 12,
+            background: CI.blueDark,
+            color: "#fff",
+            border: 0,
+            borderRadius: 14,
+            padding: "6px 10px",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          {videoOn ? "Video aus" : "Video an"}
+        </button>
+      </div>
+
+      <div
+        style={{
+          background: CI.red,
+          color: "#fff",
+          borderRadius: 16,
+          padding: 16,
+          fontSize: 18,
+          fontWeight: 800,
+          textAlign: "center",
+        }}
+      >
+        Hey! Willst du nicht irgendwann auch mal ein Haus oder eine Wohnung dein
+        Eigen nennen? <br />
+        Wie wäre es, wenn wir schon <b>heute</b> dafür auf Probe finanzieren?
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+        <button onClick={onNext} style={btnSecondary}>
+          Ja, zeig mir wie das geht
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const EINWAENDE = [
+  {
+    title: "Ich zahle doch schon Miete, das reicht.",
+    body: "Genau deshalb vergleichen wir deine Warmmiete mit einer möglichen Rate. Die Differenz arbeitet schon heute für dich als Sparrate im Fondsguthaben.",
+  },
+  {
+    title: "Was, wenn ich in 5 Jahren gar nicht kaufen will?",
+    body: "Du bleibst flexibel: Dein aufgebautes Fondsguthaben gehört dir – ob du kaufst oder nicht. Nichts verfällt.",
+  },
+  {
+    title: "Das ist mir bestimmt zu teuer.",
+    body: "Wir starten mit deiner jetzigen Warmmiete. Nur die Differenz zwischen Rate und Miete wird gespart – nicht mehr.",
+  },
+  {
+    title: "Fonds sind doch unsicher.",
+    body: "Langfristig bieten Fonds Renditechancen. Du bleibst liquide und kannst bei Bedarf anpassen oder pausieren.",
+  },
+  {
+    title: "Ich weiß nicht, ob das zu mir passt.",
+    body: "Darum machen wir es auf Probe: transparent, planbar und jederzeit anpassbar – ohne Kaufverpflichtung.",
+  },
+];
+
+function Step2Objections({ onNext }) {
+  const [active, setActive] = useState(0);
+  return (
+    <div style={{ ...card }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {EINWAENDE.map((e, i) => (
+          <button
+            key={e.title}
+            onClick={() => setActive(i)}
+            style={{
+              background: i === active ? CI.blueDark : "#eef1f5",
+              color: i === active ? "#fff" : "#111",
+              border: 0,
+              borderRadius: 14,
+              padding: "8px 12px",
+              cursor: "pointer",
+              fontWeight: 700,
+            }}
+          >
+            {i + 1}. {e.title}
+          </button>
+        ))}
+      </div>
+
+      <div
+        style={{
+          marginTop: 12,
+          padding: 16,
+          borderRadius: 16,
+          background: "#fbfcfd",
+          border: "1px solid #e9ecf1",
+        }}
+      >
+        <div style={{ fontWeight: 800, color: CI.red, marginBottom: 8 }}>
+          {EINWAENDE[active].title}
+        </div>
+        <div style={{ color: CI.grey, fontSize: 15 }}>
+          {EINWAENDE[active].body}
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: 14,
+        }}
+      >
+        <div style={{ color: CI.grey, fontSize: 13 }}>
+          Klicke die Einwände an – und lass uns dann rechnen.
+        </div>
+        <button onClick={onNext} style={btnPrimary}>
+          Weiter zum Rechner
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
-  // ===== State =====
+  const [step, setStep] = useState(1); // 1: Intro, 2: Einwände, 3: Rechner
+
+  // Eingaben
   const [warmmiete, setWarmmiete] = useState(1000);
   const [kaufpreis, setKaufpreis] = useState(400000);
   const [bruttoRendite, setBruttoRendite] = useState(6.0);
-  const [results, setResults] = useState([]);
 
-  // ===== Konstanten =====
-  const zinssatz = 0.035; // 3,5 % p.a.
-  const tilgung = 0.02; // 2,0 % p.a.
-  const kostenProzentPA = 0.013 + 0.002; // 1,5 % p.a. (1,3% + 0,2%)
+  // Konstanten
+  const zinssatz = 0.035; // 3,5% p.a.
+  const tilgung = 0.02; // 2% p.a.
+  const kostenProzentPA = 0.013 + 0.002; // 1,5% p.a. (1,3% + 0,2%)
   const stueckkostenPA = 36; // jährlich zu Jahresbeginn
-  const inflationsrate = 0.02; // nur intern, nicht anzeigen
+  const inflationsrate = 0.02; // intern
 
-  // ===== Abgeleitete Werte =====
-  const monatsrateFinanzierung = (kaufpreis * (zinssatz + tilgung)) / 12; // 5,5% p.a. / 12
-  const monatlDifferenz = Math.max(0, monatsrateFinanzierung - warmmiete); // Sparrate
+  const monatsrateFinanzierung = useMemo(
+    () => (kaufpreis * (zinssatz + tilgung)) / 12,
+    [kaufpreis]
+  );
+  const monatlDifferenz = Math.max(0, monatsrateFinanzierung - warmmiete);
 
-  // ===== Simulation =====
-  const berechnen = () => {
+  // Simulation
+  const results = useMemo(() => {
     const r_annual = (bruttoRendite || 0) / 100;
-    const r_month = Math.pow(1 + r_annual, 1 / 12) - 1; // monatl. Rendite
-    const kosten_month = kostenProzentPA / 12; // monatl. Kostenquote
+    const r_month = Math.pow(1 + r_annual, 1 / 12) - 1;
+    const kosten_month = kostenProzentPA / 12;
 
     let fondsguthaben = 0;
     let kumSparrate = 0;
     const arr = [];
-
     for (let m = 1; m <= 15 * 12; m++) {
-      // Stückkosten zu Jahresbeginn
-      if ((m - 1) % 12 === 0) fondsguthaben -= stueckkostenPA;
-      // Wachstum abzügl. Kosten + Sparrate
+      if ((m - 1) % 12 === 0) fondsguthaben -= stueckkostenPA; // Stückkosten Jahresanfang
       fondsguthaben =
         fondsguthaben * (1 + r_month - kosten_month) + monatlDifferenz;
       kumSparrate += monatlDifferenz;
-      // Jahreszeile
       if (m % 12 === 0) {
         const jahr = m / 12;
         const inflKaufpreis = kaufpreis * Math.pow(1 + inflationsrate, jahr);
@@ -109,20 +325,24 @@ export default function App() {
         });
       }
     }
-    setResults(arr);
-  };
+    return arr;
+  }, [
+    bruttoRendite,
+    kostenProzentPA,
+    stueckkostenPA,
+    inflationsrate,
+    monatlDifferenz,
+    kaufpreis,
+  ]);
 
-  // ===== PDF-Export =====
   const exportPDF = () => {
     try {
-      // Seite 1: HOCHFORMAT, Seite 2: QUERFORMAT
+      // Seite 1 Portrait
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "pt",
         format: "a4",
       });
-
-      // Helper: Header auf jeder Seite
       const drawHeader = (title) => {
         const pw = pdf.internal.pageSize.getWidth();
         pdf.setFillColor(190, 13, 62);
@@ -134,7 +354,6 @@ export default function App() {
         pdf.setFont("helvetica", "normal");
       };
 
-      // ======= Seite 1 (PORTRAIT): Parameter + Tabelle =======
       let margin = 32;
       let pageWidth = pdf.internal.pageSize.getWidth();
       let pageHeight = pdf.internal.pageSize.getHeight();
@@ -167,16 +386,14 @@ export default function App() {
         pdf.setFont("helvetica", "normal");
         y += 20;
 
-        // Spaltenbreiten: Fondsguthaben etwas mittiger
         const tableX = margin;
         const tableW = pageWidth - margin * 2;
         const yearW = 60;
-        const fondW = Math.round((tableW - yearW) * 0.45); // 45% der Restbreite
+        const fondW = Math.round((tableW - yearW) * 0.45);
         const saveW = tableW - yearW - fondW;
         const headerH = 22;
         const rowH = 20;
 
-        // Header
         pdf.setFillColor(0, 71, 103);
         pdf.setTextColor(255, 255, 255);
         pdf.rect(tableX, y - 14, tableW, headerH, "F");
@@ -191,7 +408,6 @@ export default function App() {
           { align: "right" }
         );
 
-        // Body
         const bodyTop = y + headerH + 6;
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(11);
@@ -215,7 +431,6 @@ export default function App() {
           );
         });
 
-        // Fußnote Seite 1
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(8);
         pdf.setTextColor(120);
@@ -227,7 +442,7 @@ export default function App() {
         );
       }
 
-      // ======= Seite 2 (LANDSCAPE): Chart =======
+      // Seite 2 Landscape
       const addLandscapePage = () => {
         try {
           pdf.addPage("a4", "landscape");
@@ -237,11 +452,10 @@ export default function App() {
           pdf.addPage({ orientation: "landscape" });
           return;
         } catch (e) {}
-        pdf.addPage(); // Fallback Portrait
+        pdf.addPage();
       };
       addLandscapePage();
 
-      // Nach addPage() Maße neu lesen
       pageWidth = pdf.internal.pageSize.getWidth();
       pageHeight = pdf.internal.pageSize.getHeight();
       margin = 32;
@@ -255,18 +469,15 @@ export default function App() {
       pdf.setFont("helvetica", "normal");
       y2 += 30;
 
-      // NEU:
-      const leftGutter = 72; // mehr Platz für Y-Achsenwerte
-      const chartX = margin + leftGutter; // Chart nach rechts schieben
+      const leftGutter = 72;
+      const chartX = margin + leftGutter;
       const chartY = y2;
       const chartW = pageWidth - margin * 2 - leftGutter;
       const chartH = 300;
 
-      // Rahmen
       pdf.setDrawColor(0);
       pdf.rect(chartX, chartY, chartW, chartH);
 
-      // Max-Wert bestimmen und auf 50.000 runden
       const maxFond = Math.max(...results.map((r) => r.fondsguthaben), 1);
       const maxSpar = Math.max(...results.map((r) => r.sparrate), 1);
       const maxVal = Math.ceil(Math.max(maxFond, maxSpar) / 50000) * 50000;
@@ -275,20 +486,18 @@ export default function App() {
       const scaleX = results.length > 1 ? chartW / (results.length - 1) : 0;
       const scaleY = chartH / range;
 
-      // NEU: feste 50.000er Schritte + breiterer Tick links
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(9);
       for (let val = 0; val <= maxVal; val += 50000) {
-        const yTick = chartY + chartH - (val - minVal) * scaleY;
+        const yy = chartY + chartH - (val - minVal) * scaleY;
         pdf.setDrawColor(0);
-        pdf.line(chartX - 6, yTick, chartX, yTick); // etwas längerer Tick
+        pdf.line(chartX - 6, yy, chartX, yy);
         pdf.setDrawColor(230);
-        pdf.line(chartX, yTick, chartX + chartW, yTick); // Gridline
+        pdf.line(chartX, yy, chartX + chartW, yy);
         pdf.setTextColor(60);
-        pdf.text(nf.format(val), chartX - 10, yTick + 3, { align: "right" }); // genug Platz
+        pdf.text(nf.format(val), chartX - 10, yy + 3, { align: "right" });
       }
 
-      // X-Ticks (Jahre)
       const xStep = Math.max(1, Math.ceil(results.length / 6));
       for (let i = 0; i < results.length; i += xStep) {
         const px = chartX + i * scaleX;
@@ -299,15 +508,13 @@ export default function App() {
         pdf.text(String(yr), px, chartY + chartH + 16, { align: "center" });
       }
 
-      // Achsentitel: nur X-Achse (Y-Label oben weggelassen)
       pdf.setFontSize(10);
       pdf.setTextColor(80);
       pdf.text("Jahre", chartX + chartW / 2, chartY + chartH + 30, {
         align: "center",
       });
 
-      // Linien zeichnen
-      // Fondsguthaben (grün)
+      // Linien
       pdf.setDrawColor(66, 126, 91);
       pdf.setLineWidth(2);
       results.forEach((r, i) => {
@@ -318,7 +525,6 @@ export default function App() {
       });
       if (results.length > 1) pdf.stroke();
 
-      // Kumulierte Sparrate (grau)
       pdf.setDrawColor(100, 109, 116);
       pdf.setLineWidth(2);
       results.forEach((r, i) => {
@@ -329,7 +535,6 @@ export default function App() {
       });
       if (results.length > 1) pdf.stroke();
 
-      // Legende unter dem Schaubild
       const legendY = chartY + chartH + 50;
       pdf.setDrawColor(66, 126, 91);
       pdf.setLineWidth(3);
@@ -340,23 +545,12 @@ export default function App() {
       pdf.line(margin + 160, legendY, margin + 184, legendY);
       pdf.text("Kumulierte Sparrate", margin + 192, legendY + 3);
 
-      // Fußnote Seite 2
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(8);
-      pdf.setTextColor(120);
-      pdf.text(
-        "Beispielhafte, unverbindliche Berechnung. Kosten: 1,3 % Vertragskosten + 0,2 % Fondskosten p.a.; Stückkosten 36 € p.a. (ab Jahresbeginn) | Sparrate = Finanzierungsrate - Warmmiete.",
-        margin,
-        pageHeight - 24,
-        { maxWidth: pageWidth - margin * 2 }
-      );
-
       pdf.save(
         `Finanzieren_auf_Probe_${new Date().toISOString().slice(0, 10)}.pdf`
       );
-    } catch (err) {
-      console.error("PDF-Export-Fehler:", err);
-      alert("PDF-Export ist fehlgeschlagen. Details in der Konsole.");
+    } catch (e) {
+      console.error(e);
+      alert("PDF-Export fehlgeschlagen.");
     }
   };
 
@@ -368,6 +562,7 @@ export default function App() {
           borderRadius: 16,
           overflow: "hidden",
           boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+          marginBottom: 10,
         }}
       >
         <div
@@ -380,150 +575,165 @@ export default function App() {
             alignItems: "center",
           }}
         >
-          <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: 0.3 }}>
+          <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: 0.2 }}>
             Finanzieren auf Probe
           </span>
         </div>
       </div>
 
-      {/* Bild: Familie vorm Haus */}
-      <div style={{ marginTop: 12, borderRadius: 16, overflow: "hidden" }}>
-        <img
-          src="https://images.pexels.com/photos/7578935/pexels-photo-7578935.jpeg"
-          alt="Familie vorm Haus"
-          style={{ width: "100%", height: 220, objectFit: "cover" }}
-        />
-      </div>
+      <Stepper step={step} setStep={setStep} />
 
-      {/* Eingaben */}
-      <div style={{ ...cardStyle, marginTop: 8 }}>
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}
-        >
-          <div>
-            <div style={labelStyle}>Deine Warmmiete (€ / Monat)</div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <input
-                type="range"
-                min={400}
-                max={2000}
-                step={10}
-                value={warmmiete}
-                onChange={(e) => setWarmmiete(Number(e.target.value))}
-                style={{ width: "100%" }}
-              />
-              <input
-                type="number"
-                step={10}
-                value={warmmiete}
-                onChange={(e) => setWarmmiete(Number(e.target.value))}
-                style={{ ...inputStyle, width: 110 }}
-              />
-            </div>
-          </div>
-          <div>
-            <div style={labelStyle}>Dein Kaufpreis (€)</div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <input
-                type="range"
-                min={200000}
-                max={1500000}
-                step={10000}
-                value={kaufpreis}
-                onChange={(e) => setKaufpreis(Number(e.target.value))}
-                style={{ width: "100%" }}
-              />
-              <input
-                type="number"
-                value={kaufpreis}
-                onChange={(e) => setKaufpreis(Number(e.target.value))}
-                style={{ ...inputStyle, width: 160 }}
-              />
-            </div>
-          </div>
-        </div>
+      {step === 1 && <Step1Intro onNext={() => setStep(2)} />}
+      {step === 2 && <Step2Objections onNext={() => setStep(3)} />}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 16,
-            marginTop: 16,
-          }}
-        >
-          <div>
-            <div style={labelStyle}>Bruttorendite-Annahme (% p.a.)</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input
-                type="range"
-                min={0}
-                max={15}
-                step={0.1}
-                value={bruttoRendite}
-                onChange={(e) => setBruttoRendite(Number(e.target.value))}
-                style={{ width: "100%" }}
-              />
-              <input
-                type="number"
-                step={0.1}
-                value={bruttoRendite}
-                onChange={(e) => setBruttoRendite(Number(e.target.value))}
-                style={{ ...inputStyle, width: 80 }}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div>
-              <div style={labelStyle}>Monatliche Finanzierungsrate</div>
-              <div style={{ ...inputStyle, background: "#f7f7f9", width: 140 }}>
-                {fmtEUR(monatsrateFinanzierung)}
+      {step === 3 && (
+        <div style={{ display: "grid", gap: 16 }}>
+          {/* Eingaben */}
+          <div style={{ ...card }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 24,
+              }}
+            >
+              <div>
+                <div style={label}>Deine Warmmiete (€ / Monat)</div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <input
+                    type="range"
+                    min={400}
+                    max={2000}
+                    step={10}
+                    value={warmmiete}
+                    onChange={(e) => setWarmmiete(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                  <input
+                    type="number"
+                    step={10}
+                    value={warmmiete}
+                    onChange={(e) => setWarmmiete(Number(e.target.value))}
+                    style={{ ...input, width: 110 }}
+                  />
+                </div>
+              </div>
+              <div>
+                <div style={label}>Dein Kaufpreis (€)</div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <input
+                    type="range"
+                    min={200000}
+                    max={1500000}
+                    step={10000}
+                    value={kaufpreis}
+                    onChange={(e) => setKaufpreis(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                  <input
+                    type="number"
+                    value={kaufpreis}
+                    onChange={(e) => setKaufpreis(Number(e.target.value))}
+                    style={{ ...input, width: 160 }}
+                  />
+                </div>
               </div>
             </div>
-            <div>
-              <div style={labelStyle}>Monatliche Sparrate</div>
-              <div style={{ ...inputStyle, background: "#f7f7f9", width: 140 }}>
-                {fmtEUR(monatlDifferenz)}
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 16,
+                marginTop: 16,
+              }}
+            >
+              <div>
+                <div style={label}>Bruttorendite-Annahme (% p.a.)</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="range"
+                    min={0}
+                    max={15}
+                    step={0.1}
+                    value={bruttoRendite}
+                    onChange={(e) => setBruttoRendite(Number(e.target.value))}
+                    style={{ width: "100%" }}
+                  />
+                  <input
+                    type="number"
+                    step={0.1}
+                    value={bruttoRendite}
+                    onChange={(e) => setBruttoRendite(Number(e.target.value))}
+                    style={{ ...input, width: 80 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div>
+                  <div style={label}>Monatliche Finanzierungsrate</div>
+                  <div style={{ ...input, background: "#f7f7f9", width: 140 }}>
+                    {fmtEUR(monatsrateFinanzierung)}
+                  </div>
+                </div>
+                <div>
+                  <div style={label}>Monatliche Sparrate</div>
+                  <div style={{ ...input, background: "#f7f7f9", width: 140 }}>
+                    {fmtEUR(monatlDifferenz)}
+                  </div>
+                </div>
               </div>
             </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                marginTop: 16,
+              }}
+            >
+              <button
+                style={btnPrimary}
+                onClick={() =>
+                  window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: "smooth",
+                  })
+                }
+              >
+                Ergebnis anzeigen
+              </button>
+              <button style={btnSecondary} onClick={exportPDF}>
+                PDF exportieren
+              </button>
+            </div>
+
+            <ul
+              style={{
+                color: CI.grey,
+                fontSize: 13,
+                marginTop: 12,
+                paddingLeft: 16,
+              }}
+            >
+              <li>
+                Deine monatliche Belastung: 5,5 % (3,5 % Zins + 2 % Tilgung)
+              </li>
+              <li>
+                Deine monatliche Einzahlung (Sparrate): Finanzierungsrate minus
+                Warmmiete
+              </li>
+              <li>
+                Kosten: <b>1,3 % Vertragskosten</b> + <b>0,2 % Fondskosten</b>{" "}
+                p.a.; <b>Stückkosten 36 € p.a.</b> (ab Jahresbeginn)
+              </li>
+            </ul>
           </div>
-        </div>
 
-        <div
-          style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}
-        >
-          <button onClick={berechnen} style={buttonPrimary}>
-            Berechnen
-          </button>
-          <button onClick={exportPDF} style={buttonPdf}>
-            PDF exportieren
-          </button>
-        </div>
-
-        <ul
-          style={{
-            color: CI.grey,
-            fontSize: 13,
-            marginTop: 12,
-            paddingLeft: 16,
-          }}
-        >
-          <li>Deine monatliche Belastung: 5,5 % (3,5 % Zins + 2 % Tilgung)</li>
-          <li>
-            Deine monatliche Einzahlung (Sparrate): Finanzierungsrate minus
-            Warmmiete
-          </li>
-          <li>
-            Kosten: <b>1,3 % Vertragskosten</b> + <b>0,2 % Fondskosten</b> p.a.;{" "}
-            <b>Stückkosten 36 € p.a.</b>
-          </li>
-        </ul>
-      </div>
-
-      {/* Ergebnisse */}
-      {results.length > 0 && (
-        <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
-          <div style={cardStyle}>
+          {/* Ergebnisse */}
+          <div style={{ ...card }}>
             <h2
               style={{
                 color: CI.red,
@@ -610,7 +820,7 @@ export default function App() {
             </div>
           </div>
 
-          <div style={cardStyle}>
+          <div style={{ ...card }}>
             <h2
               style={{
                 color: CI.red,
@@ -642,7 +852,7 @@ export default function App() {
                   <Line
                     type="monotone"
                     dataKey="fondsguthaben"
-                    stroke={CI.greenLine}
+                    stroke={CI.green}
                     strokeWidth={3}
                     dot={false}
                     name="Fondsguthaben"
@@ -660,22 +870,46 @@ export default function App() {
             </div>
           </div>
 
-          {/* CTA-Kachel rot mit weißem Text */}
+          {/* CTA */}
           <div
             style={{
               background: CI.red,
               color: "#fff",
               borderRadius: 16,
               padding: 16,
+              fontWeight: 700,
+              textAlign: "center",
             }}
           >
-            <div style={{ fontWeight: 700 }}>
-              Setzen Sie heute den Kurs: Mit Ihrer Sparrate bauen Sie planbar
-              Fondsguthaben auf.
-            </div>
+            Setzen Sie heute den Kurs: Mit Ihrer Sparrate bauen Sie planbar
+            Fondsguthaben auf.
           </div>
         </div>
       )}
+
+      {/* Footer Nav */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: 14,
+        }}
+      >
+        <button
+          disabled={step === 1}
+          onClick={() => setStep((s) => Math.max(1, s - 1))}
+          style={{ ...btnSecondary, opacity: step === 1 ? 0.5 : 1 }}
+        >
+          Zurück
+        </button>
+        <button
+          disabled={step === 3}
+          onClick={() => setStep((s) => Math.min(3, s + 1))}
+          style={{ ...btnPrimary, opacity: step === 3 ? 0.5 : 1 }}
+        >
+          Weiter
+        </button>
+      </div>
     </div>
   );
 }
