@@ -3,21 +3,26 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { jsPDF } from "jspdf";
-import { useEffect } from "react";
 
+/* ===== tawk.to mit Consent laden ===== */
 function useTawk(consentGiven) {
   useEffect(() => {
-    if (!consentGiven) return; // Nur laden, wenn Zustimmung vorliegt
+    if (!consentGiven) return; // nur laden, wenn Einwilligung vorliegt
+    if (window.__tawkLoaded) return; // Doppel-Load verhindern
 
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_LoadStart = new Date();
+
     const s1 = document.createElement("script");
-    const s0 = document.getElementsByTagName("script")[0];
     s1.async = true;
-    s1.src = "https://embed.tawk.to/DEINE_TAWK_ID/DEFAULT"; // 👉 Hier deine echte Property-ID einsetzen!
+    s1.src = "https://embed.tawk.to/6903190ad8bd2d1955019dcb/1j8q1jk6i"; // deine Property-ID
     s1.charset = "UTF-8";
     s1.setAttribute("crossorigin", "*");
+
+    const s0 = document.getElementsByTagName("script")[0];
     s0.parentNode.insertBefore(s1, s0);
+
+    window.__tawkLoaded = true;
   }, [consentGiven]);
 }
 
@@ -48,10 +53,11 @@ const input = { padding: "8px 10px", border: "1px solid #d0d5dd", borderRadius: 
 const btnPrimary = { background: CI.red, color: "#fff", border: 0, borderRadius: 16, padding: "10px 14px", fontWeight: 700, cursor: "pointer" };
 const btnSecondary = { background: CI.blueDark, color: "#fff", border: 0, borderRadius: 16, padding: "10px 14px", fontWeight: 700, cursor: "pointer" };
 
-/* ===== Reusable: Autoplay-Video mit Fallback-Overlay ===== */
-function AutoPlayVideo({ src, poster, height = 260, rounded = 16 }) {
+/* ===== Reusable: Autoplay-Video (16:9, cover) mit Fallback-Overlays ===== */
+function AutoPlayVideo({ src, poster, height = 420, rounded = 16 }) {
   const ref = useRef(null);
   const [blocked, setBlocked] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
     const v = ref.current;
@@ -60,6 +66,7 @@ function AutoPlayVideo({ src, poster, height = 260, rounded = 16 }) {
       try {
         v.muted = true;
         v.playsInline = true;
+        v.loop = true;
         await v.play();
         setBlocked(false);
       } catch {
@@ -71,7 +78,19 @@ function AutoPlayVideo({ src, poster, height = 260, rounded = 16 }) {
   const manualStart = async () => {
     const v = ref.current;
     if (!v) return;
-    try { await v.play(); setBlocked(false); } catch {}
+    try {
+      await v.play();
+      setBlocked(false);
+    } catch {}
+  };
+
+  const toggleMute = () => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setIsMuted(v.muted);
+    if (!v.paused) return;
+    v.play().catch(() => {});
   };
 
   return (
@@ -80,16 +99,30 @@ function AutoPlayVideo({ src, poster, height = 260, rounded = 16 }) {
         ref={ref}
         autoPlay
         muted
-        loop
         playsInline
         preload="metadata"
         poster={poster}
-        style={{ width: "100%", height, objectFit: "cover", display: "block" }}
+        style={{ width: "100%", height, objectFit: "cover", display: "block", aspectRatio: "16 / 9" }}
       >
         <source src={src} type="video/mp4" />
         Ihr Browser unterstützt das Video-Element nicht.
       </video>
 
+      {/* Ton-Schalter */}
+      <button
+        onClick={toggleMute}
+        style={{
+          position: "absolute", right: 12, top: 12,
+          background: "rgba(0,0,0,0.6)", color: "#fff", border: 0, borderRadius: 999,
+          padding: "8px 12px", fontWeight: 800, cursor: "pointer"
+        }}
+        aria-label={isMuted ? "Ton einschalten" : "Ton ausschalten"}
+        title={isMuted ? "Ton einschalten" : "Ton ausschalten"}
+      >
+        {isMuted ? "🔇 Ton aus" : "🔊 Ton an"}
+      </button>
+
+      {/* Autoplay-Blocker Overlay */}
       {blocked && (
         <button
           onClick={manualStart}
@@ -137,11 +170,10 @@ function Stepper({ step }) {
   );
 }
 
-/* ===== Step 1: Intro (Video) ===== */
-function Step1Intro({ onNext }) {
+/* ===== Step 1: Intro (Video, kein Mittel-Button) ===== */
+function Step1Intro() {
   return (
     <div style={{ ...card }}>
-      {/* Dein Start-Video */}
       <AutoPlayVideo src={"/Zuhausegefunden.mp4"} poster={undefined} />
       <div
         style={{
@@ -153,14 +185,12 @@ function Step1Intro({ onNext }) {
         <br />
         Wie wäre es, wenn wir schon <b>heute</b> dafür auf Probe finanzieren?
       </div>
-      <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
-        <button onClick={onNext} style={btnSecondary}>Weiter</button>
-      </div>
+      {/* KEIN Button mehr hier – Navigation unten rechts */}
     </div>
   );
 }
 
-/* ===== Step 2: Einwände → Antwort-Videos ===== */
+/* ===== Step 2: Einwände → Antwort-Videos (kein Karten-Button) ===== */
 const OBJECTIONS = [
   { title: "Ich zahle doch schon Miete, das reicht.", src: "/MietevsRate.mp4" },
   { title: "Was, wenn ich in 5 Jahren gar nicht kaufen will?", src: "/Fondsguthaben_DeineFlexibilit%C3%A4t.mp4" }, // ä encodiert
@@ -169,7 +199,7 @@ const OBJECTIONS = [
   { title: "Ich weiß nicht, ob das zu mir passt.", src: "/Probeangebot_Transparent_Flexibel.mp4" },
 ];
 
-function Step2Objections({ onNext }) {
+function Step2Objections() {
   const [active, setActive] = useState(0);
   return (
     <div style={{ ...card }}>
@@ -197,18 +227,17 @@ function Step2Objections({ onNext }) {
         <AutoPlayVideo src={OBJECTIONS[active].src} />
       </div>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-        <button onClick={onNext} style={btnPrimary}>Weiter zum Rechner</button>
-      </div>
+      {/* KEIN Button mehr hier – Navigation unten rechts */}
     </div>
   );
 }
 
-/* ===== App (Step 3: Rechner inkl. PDF) ===== */
+/* ===== App (Step 3: Rechner inkl. PDF & Kontakt-Buttons) ===== */
 export default function App() {
-  // TODO: hier deinen echten Consentwert aus dem Cookie-Manager einsetzen
-  const consentGiven = true; // <- nur zu Testzwecken! später vom CMP lesen
+  // >>> tawk.to nur mit Consent laden (hier Demo: true)
+  const consentGiven = true;
   useTawk(consentGiven);
+
   const [step, setStep] = useState(1); // 1: Intro, 2: Einwände, 3: Rechner
 
   // Eingaben
@@ -230,8 +259,9 @@ export default function App() {
   );
   const monatlDifferenz = Math.max(0, monatsrateFinanzierung - warmmiete);
 
-  // Simulation Fondsguthaben (ohne LTV)
+  // Simulation Fondsguthaben + Inflationspreis für Eigenkapital%
   const results = useMemo(() => {
+    const inflationsrate = 0.02; // 2% p.a. im Hintergrund
     const r_annual = (rendite || 0) / 100;
     const r_month = Math.pow(1 + r_annual, 1 / 12) - 1;
     const kosten_month = (0.013 + 0.002) / 12; // 1,5% p.a. Kosten
@@ -247,15 +277,20 @@ export default function App() {
 
       if (m % 12 === 0) {
         const jahr = m / 12;
+        const inflKaufpreis = kaufpreis * Math.pow(1 + inflationsrate, jahr);
+        const eigenkapitalPct = inflKaufpreis > 0 ? Math.max(0, (fondsguthaben / inflKaufpreis) * 100) : 0;
+
         arr.push({
           jahr,
           fondsguthaben: Math.max(0, Math.round(fondsguthaben)),
           sparrate: Math.round(kumSparrate),
+          inflKaufpreis: Math.round(inflKaufpreis),
+          eigenkapitalPct: Math.round(eigenkapitalPct * 10) / 10, // xx,x %
         });
       }
     }
     return arr;
-  }, [rendite, monatlDifferenz]);
+  }, [rendite, monatlDifferenz, kaufpreis]);
 
   /* ===== PDF Export ===== */
   const exportPDF = () => {
@@ -307,9 +342,10 @@ export default function App() {
 
         const tableX = margin;
         const tableW = pageWidth - margin * 2;
-        const yearW = 60;
-        const fondW = Math.round((tableW - yearW) * 0.45);
-        const saveW = tableW - yearW - fondW;
+        const yearW = 52;
+        const fondW = Math.round((tableW - yearW) * 0.35);
+        const saveW = Math.round((tableW - yearW) * 0.33);
+        const eqW = tableW - yearW - fondW - saveW; // Eigenkapital%
         const headerH = 22;
         const rowH = 20;
 
@@ -319,7 +355,8 @@ export default function App() {
         pdf.rect(tableX, y - 14, tableW, headerH, "F");
         pdf.text("Jahr", tableX + 8, y + 2);
         pdf.text("Fondsguthaben (€)", tableX + yearW + fondW / 2, y + 2, { align: "center" });
-        pdf.text("Kumulierte Sparrate (€)", tableX + yearW + fondW + saveW - 8, y + 2, { align: "right" });
+        pdf.text("Kumulierte Sparrate (€)", tableX + yearW + fondW + saveW / 2, y + 2, { align: "center" });
+        pdf.text("Eigenkapital (%)", tableX + yearW + fondW + saveW + eqW / 2, y + 2, { align: "center" });
 
         // Body
         const bodyTop = y + headerH + 6;
@@ -330,9 +367,11 @@ export default function App() {
           const rowY = bodyTop + i * rowH;
           pdf.setDrawColor(235);
           pdf.line(tableX, rowY, tableX + tableW, rowY);
+
           pdf.text(String(r.jahr), tableX + 8, rowY + 14);
           pdf.text(nf.format(r.fondsguthaben), tableX + yearW + fondW / 2, rowY + 14, { align: "center" });
-          pdf.text(nf.format(r.sparrate), tableX + yearW + fondW + saveW - 8, rowY + 14, { align: "right" });
+          pdf.text(nf.format(r.sparrate), tableX + yearW + fondW + saveW / 2, rowY + 14, { align: "center" });
+          pdf.text(String(r.eigenkapitalPct).replace(".", ",") + " %", tableX + yearW + fondW + saveW + eqW / 2, rowY + 14, { align: "center" });
         });
 
         // Disclaimer
@@ -356,7 +395,6 @@ export default function App() {
       addLandscapePage();
 
       const pw = pdf.internal.pageSize.getWidth();
-      const ph = pdf.internal.pageSize.getHeight();
       const m = 32;
 
       // Kopfband
@@ -450,6 +488,13 @@ export default function App() {
     }
   };
 
+  /* ===== Mailto-Helper (ohne automatischen Anhang) ===== */
+  const mailWithSubjectBody = (subject, body) => {
+    const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = url;
+  };
+
+  /* ===== UI ===== */
   return (
     <div style={{ padding: 20, maxWidth: 1100, margin: "0 auto" }}>
       {/* Header */}
@@ -461,8 +506,8 @@ export default function App() {
 
       <Stepper step={step} />
 
-      {step === 1 && <Step1Intro onNext={() => setStep(2)} />}
-      {step === 2 && <Step2Objections onNext={() => setStep(3)} />}
+      {step === 1 && <Step1Intro />}
+      {step === 2 && <Step2Objections />}
 
       {step === 3 && (
         <div style={{ display: "grid", gap: 16 }}>
@@ -497,11 +542,11 @@ export default function App() {
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <div>
                   <div style={label}>Monatliche Finanzierungsrate</div>
-                  <div style={{ ...input, background: "#f7f7f9", width: 160 }}>{fmtEUR(monatsrateFinanzierung)}</div>
+                  <div style={{ ...input, background: "#f7f7f9", width: 180 }}>{fmtEUR(monatsrateFinanzierung)}</div>
                 </div>
                 <div>
                   <div style={label}>Monatliche Sparrate</div>
-                  <div style={{ ...input, background: "#f7f7f9", width: 160 }}>{fmtEUR(monatlDifferenz)}</div>
+                  <div style={{ ...input, background: "#f7f7f9", width: 180 }}>{fmtEUR(monatlDifferenz)}</div>
                 </div>
               </div>
             </div>
@@ -533,18 +578,41 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-              <button style={btnSecondary} onClick={exportPDF}>PDF exportieren</button>
-            </div>
-
+            {/* Hinweise – Wortlaut angepasst */}
             <ul style={{ color: CI.grey, fontSize: 13, marginTop: 12, paddingLeft: 16 }}>
-              <li>Deine monatliche Belastung: Zins + Tilgung (z. B. 3,5 % + 2,0 %)</li>
+              <li>Deine spätere monatliche Finanzierungsrate: Zins + Tilgung (z. B. 3,5 % + 2,0 %)</li>
               <li>Deine monatliche Einzahlung (Sparrate): Finanzierungsrate minus Warmmiete</li>
               <li>Kosten: <b>1,3 % Vertragskosten</b> + <b>0,2 % Fondskosten</b> p.a.; <b>Stückkosten 36 € p.a.</b> (ab Jahresbeginn)</li>
             </ul>
+
+            {/* Aktionen */}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+              <button style={btnSecondary} onClick={exportPDF}>PDF exportieren</button>
+
+              {/* Kontakt – Mailto ohne Auto-Anhang */}
+              <button
+                style={btnPrimary}
+                onClick={() => mailWithSubjectBody(
+                  "Finanzieren auf Probe - weitere Fragen",
+                  "Hi, ich finde das cool - habe aber noch Fragen. Nimm bitte mit mir Kontakt auf.\n\n(P.S.: Ich habe die PDF über 'PDF exportieren' erstellt.)"
+                )}
+              >
+                Ich habe noch Fragen: Nimm mit mir Kontakt auf
+              </button>
+
+              <button
+                style={btnSecondary}
+                onClick={() => mailWithSubjectBody(
+                  "Finanzieren auf Probe - lass es uns machen",
+                  "Hi, ich drohe mit Abschluss, weil ich die Sache cool finde. Nimm bitte mit mir Kontakt auf.\n\n(P.S.: Ich habe die PDF über 'PDF exportieren' erstellt.)"
+                )}
+              >
+                Ich finde das cool – Genau das möchte ich
+              </button>
+            </div>
           </div>
 
-          {/* Ergebnisse: Tabelle */}
+          {/* Ergebnisse: Tabelle (mit 4. Spalte Eigenkapital %) */}
           <div style={{ ...card }}>
             <h2 style={{ color: CI.red, margin: 0, marginBottom: 8, fontSize: 18 }}>Kapitalentwicklung (jährlich, bis 15 Jahre)</h2>
             <div style={{ overflowX: "auto" }}>
@@ -554,6 +622,7 @@ export default function App() {
                     <th style={{ textAlign: "center", padding: 8, border: "1px solid #003247" }}>Jahr</th>
                     <th style={{ textAlign: "center", padding: 8, border: "1px solid #003247" }}>Fondsguthaben (€)</th>
                     <th style={{ textAlign: "center", padding: 8, border: "1px solid #003247" }}>Kumulierte Sparrate (€)</th>
+                    <th style={{ textAlign: "center", padding: 8, border: "1px solid #003247" }}>Eigenkapital (%)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -562,6 +631,9 @@ export default function App() {
                       <td style={{ padding: 8, border: "1px solid #f3d6d8", textAlign: "center" }}>{r.jahr}</td>
                       <td style={{ padding: 8, border: "1px solid #f3d6d8", textAlign: "center" }}>{nf.format(r.fondsguthaben)}</td>
                       <td style={{ padding: 8, border: "1px solid #f3d6d8", textAlign: "center" }}>{nf.format(r.sparrate)}</td>
+                      <td style={{ padding: 8, border: "1px solid #f3d6d8", textAlign: "center" }}>
+                        {String(r.eigenkapitalPct).replace(".", ",")} %
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -596,9 +668,34 @@ export default function App() {
 
       {/* Footer Navigation */}
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14 }}>
-        <button disabled={step === 1} onClick={() => setStep((s) => Math.max(1, s - 1))} style={{ ...btnSecondary, opacity: step === 1 ? 0.5 : 1 }}>Zurück</button>
-        <button disabled={step === 3} onClick={() => setStep((s) => Math.min(3, s + 1))} style={{ ...btnPrimary, opacity: step === 3 ? 0.5 : 1 }}>Weiter</button>
+        <button
+          disabled={step === 1}
+          onClick={() => setStep((s) => Math.max(1, s - 1))}
+          style={{ ...btnSecondary, opacity: step === 1 ? 0.5 : 1 }}
+        >
+          Zurück
+        </button>
+
+        <button
+          disabled={step === 3}
+          onClick={() => setStep((s) => Math.min(3, s + 1))}
+          style={{ ...btnPrimary, opacity: step === 3 ? 0.5 : 1 }}
+        >
+          {step === 1 ? "Weiter" : step === 2 ? "Weiter zum Rechner" : "Weiter"}
+        </button>
       </div>
+
+      {/* Footer: Datenschutzerklärung */}
+      <footer style={{ textAlign: "center", marginTop: 24, fontSize: 13 }}>
+        <a
+          href="/datenschutz.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#004767", textDecoration: "none" }}
+        >
+          Datenschutzerklärung
+        </a>
+      </footer>
     </div>
   );
 }
