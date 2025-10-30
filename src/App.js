@@ -3,6 +3,23 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { jsPDF } from "jspdf";
+import { useEffect } from "react";
+
+function useTawk(consentGiven) {
+  useEffect(() => {
+    if (!consentGiven) return; // Nur laden, wenn Zustimmung vorliegt
+
+    window.Tawk_API = window.Tawk_API || {};
+    window.Tawk_LoadStart = new Date();
+    const s1 = document.createElement("script");
+    const s0 = document.getElementsByTagName("script")[0];
+    s1.async = true;
+    s1.src = "https://embed.tawk.to/DEINE_TAWK_ID/DEFAULT"; // 👉 Hier deine echte Property-ID einsetzen!
+    s1.charset = "UTF-8";
+    s1.setAttribute("crossorigin", "*");
+    s0.parentNode.insertBefore(s1, s0);
+  }, [consentGiven]);
+}
 
 /* ===== ALH Corporate Design ===== */
 const RGB = (r, g, b) => `rgb(${r}, ${g}, ${b})`;
@@ -189,6 +206,9 @@ function Step2Objections({ onNext }) {
 
 /* ===== App (Step 3: Rechner inkl. PDF) ===== */
 export default function App() {
+  // TODO: hier deinen echten Consentwert aus dem Cookie-Manager einsetzen
+  const consentGiven = true; // <- nur zu Testzwecken! später vom CMP lesen
+  useTawk(consentGiven);
   const [step, setStep] = useState(1); // 1: Intro, 2: Einwände, 3: Rechner
 
   // Eingaben
