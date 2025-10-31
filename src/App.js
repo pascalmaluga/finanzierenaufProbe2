@@ -90,7 +90,6 @@ function AutoPlayVideo({ src, poster, height = 420, fit = "cover", rounded = 16,
     } catch {
       setBlocked(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, forceRemountKey]);
 
   const manualStart = async () => {
