@@ -7,15 +7,15 @@ import { jsPDF } from "jspdf";
 /* ===== tawk.to mit Consent laden ===== */
 function useTawk(consentGiven) {
   useEffect(() => {
-    if (!consentGiven) return; // nur laden, wenn Einwilligung vorliegt
-    if (window.__tawkLoaded) return; // Doppel-Load verhindern
+    if (!consentGiven) return;
+    if (window.__tawkLoaded) return;
 
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_LoadStart = new Date();
 
     const s1 = document.createElement("script");
     s1.async = true;
-    s1.src = "https://embed.tawk.to/6903190ad8bd2d1955019dcb/1j8q1jk6i"; // deine Property-ID
+    s1.src = "https://embed.tawk.to/6903190ad8bd2d1955019dcb/1j8q1jk6i";
     s1.charset = "UTF-8";
     s1.setAttribute("crossorigin", "*");
 
@@ -26,12 +26,26 @@ function useTawk(consentGiven) {
   }, [consentGiven]);
 }
 
+/* ===== kleine Helfer ===== */
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < breakpoint;
+  });
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 /* ===== ALH Corporate Design ===== */
 const RGB = (r, g, b) => `rgb(${r}, ${g}, ${b})`;
 const CI = {
-  red: RGB(190, 13, 62),       // Header/CTA
-  blueDark: RGB(0, 71, 103),   // Buttons / Tabellenkopf
-  green: RGB(66, 126, 91),     // Fondsguthaben-Linie
+  red: RGB(190, 13, 62),
+  blueDark: RGB(0, 71, 103),
+  green: RGB(66, 126, 91),
   greyLine: RGB(100, 109, 116),
   grey: "#6E6E6E",
   white: "#FFFFFF",
@@ -53,27 +67,31 @@ const input = { padding: "8px 10px", border: "1px solid #d0d5dd", borderRadius: 
 const btnPrimary = { background: CI.red, color: "#fff", border: 0, borderRadius: 16, padding: "10px 14px", fontWeight: 700, cursor: "pointer" };
 const btnSecondary = { background: CI.blueDark, color: "#fff", border: 0, borderRadius: 16, padding: "10px 14px", fontWeight: 700, cursor: "pointer" };
 
-/* ===== Reusable: Autoplay-Video (16:9, cover) mit Fallback-Overlays ===== */
-function AutoPlayVideo({ src, poster, height = 420, rounded = 16 }) {
+/* ===== Reusable: Autoplay-Video (16:9) mit Fallback; sauberer Source-Wechsel ===== */
+function AutoPlayVideo({ src, poster, height = 420, fit = "cover", rounded = 16, forceRemountKey }) {
   const ref = useRef(null);
   const [blocked, setBlocked] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
+  // Wenn sich die Quelle ändert: Video neu laden & Autoplay versuchen
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    (async () => {
-      try {
-        v.muted = true;
-        v.playsInline = true;
-        v.loop = true;
-        await v.play();
-        setBlocked(false);
-      } catch {
-        setBlocked(true);
-      }
-    })();
-  }, [src]);
+    setBlocked(false);
+    try {
+      v.pause();
+      // direkte src-Steuerung (zuverlässiger als <source>)
+      v.src = src;
+      v.load();
+      v.muted = true;
+      v.playsInline = true;
+      v.loop = true;
+      v.play().then(() => setBlocked(false)).catch(() => setBlocked(true));
+    } catch {
+      setBlocked(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, forceRemountKey]);
 
   const manualStart = async () => {
     const v = ref.current;
@@ -89,25 +107,29 @@ function AutoPlayVideo({ src, poster, height = 420, rounded = 16 }) {
     if (!v) return;
     v.muted = !v.muted;
     setIsMuted(v.muted);
-    if (!v.paused) return;
-    v.play().catch(() => {});
+    if (v.paused) v.play().catch(() => {});
   };
 
   return (
-    <div style={{ borderRadius: rounded, overflow: "hidden", position: "relative" }}>
+    <div style={{ borderRadius: rounded, overflow: "hidden", position: "relative", background: "#000" }}>
       <video
+        key={forceRemountKey} // erzwingt Remount bei Source-Wechsel
         ref={ref}
         autoPlay
         muted
         playsInline
         preload="metadata"
         poster={poster}
-        style={{ width: "100%", height, objectFit: "cover", display: "block", aspectRatio: "16 / 9" }}
-      >
-        <source src={src} type="video/mp4" />
-        Ihr Browser unterstützt das Video-Element nicht.
-      </video>
-
+        style={{
+          width: "100%",
+          height,
+          objectFit: fit,        // "cover" oder "contain"
+          objectPosition: "center",
+          display: "block",
+          aspectRatio: "16 / 9",
+          background: "#000",
+        }}
+      />
       {/* Ton-Schalter */}
       <button
         onClick={toggleMute}
@@ -170,11 +192,14 @@ function Stepper({ step }) {
   );
 }
 
-/* ===== Step 1: Intro (Video, kein Mittel-Button) ===== */
+/* ===== Step 1: Intro (größer) ===== */
 function Step1Intro() {
+  // Desktop höher, Mobile etwas niedriger
+  const isMobile = useIsMobile();
+  const introHeight = isMobile ? 380 : 560;
   return (
     <div style={{ ...card }}>
-      <AutoPlayVideo src={"/Zuhausegefunden.mp4"} poster={undefined} />
+      <AutoPlayVideo src={"/Zuhausegefunden.mp4"} height={introHeight} fit="cover" />
       <div
         style={{
           background: CI.red, color: "#fff", borderRadius: 16, padding: 16,
@@ -185,15 +210,14 @@ function Step1Intro() {
         <br />
         Wie wäre es, wenn wir schon <b>heute</b> dafür auf Probe finanzieren?
       </div>
-      {/* KEIN Button mehr hier – Navigation unten rechts */}
     </div>
   );
 }
 
-/* ===== Step 2: Einwände → Antwort-Videos (kein Karten-Button) ===== */
+/* ===== Step 2: Einwände → Antwort-Videos (mobil cover, Desktop contain) ===== */
 const OBJECTIONS = [
   { title: "Ich zahle doch schon Miete, das reicht.", src: "/MietevsRate.mp4" },
-  { title: "Was, wenn ich in 5 Jahren gar nicht kaufen will?", src: "/Fondsguthaben_DeineFlexibilit%C3%A4t.mp4" }, // ä encodiert
+  { title: "Was, wenn ich in 5 Jahren gar nicht kaufen will?", src: "/Fondsguthaben_DeineFlexibilit%C3%A4t.mp4" },
   { title: "Das ist mir bestimmt zu teuer.", src: "/WarmmieteSparen.mp4" },
   { title: "Fonds sind doch unsicher.", src: "/Fonds_Rendite_Orientierung.mp4" },
   { title: "Ich weiß nicht, ob das zu mir passt.", src: "/Probeangebot_Transparent_Flexibel.mp4" },
@@ -201,6 +225,10 @@ const OBJECTIONS = [
 
 function Step2Objections() {
   const [active, setActive] = useState(0);
+  const isMobile = useIsMobile();
+  const videoFit = isMobile ? "cover" : "contain"; // Desktop = contain (kein starker Beschnitt)
+  const videoHeight = isMobile ? 380 : 520;
+
   return (
     <div style={{ ...card }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -224,17 +252,21 @@ function Step2Objections() {
       </div>
 
       <div style={{ marginTop: 12 }}>
-        <AutoPlayVideo src={OBJECTIONS[active].src} />
+        {/* forceRemountKey sorgt dafür, dass das Video bei neuer Quelle sicher neu aufgebaut wird */}
+        <AutoPlayVideo
+          src={OBJECTIONS[active].src}
+          height={videoHeight}
+          fit={videoFit}
+          forceRemountKey={OBJECTIONS[active].src}
+        />
       </div>
-
-      {/* KEIN Button mehr hier – Navigation unten rechts */}
     </div>
   );
 }
 
 /* ===== App (Step 3: Rechner inkl. PDF & Kontakt-Buttons) ===== */
 export default function App() {
-  // >>> tawk.to nur mit Consent laden (hier Demo: true)
+  // tawk.to mit (später echtem) Consent
   const consentGiven = true;
   useTawk(consentGiven);
 
@@ -243,10 +275,10 @@ export default function App() {
   // Eingaben
   const [warmmiete, setWarmmiete] = useState(1000);
   const [kaufpreis, setKaufpreis] = useState(400000);
-  const [rendite, setRendite] = useState(6.0);      // Renditeerwartung
-  const [zins, setZins] = useState(3.5);            // % p.a.
-  const [tilgung, setTilgung] = useState(2.0);      // % p.a.
-  const [nebenkostenPct, setNebenkostenPct] = useState(10.0); // % vom Kaufpreis
+  const [rendite, setRendite] = useState(6.0);
+  const [zins, setZins] = useState(3.5);
+  const [tilgung, setTilgung] = useState(2.0);
+  const [nebenkostenPct, setNebenkostenPct] = useState(10.0);
 
   // Abgeleitete Größen
   const initialLoan = useMemo(() => kaufpreis * (1 + nebenkostenPct / 100), [kaufpreis, nebenkostenPct]);
@@ -259,12 +291,12 @@ export default function App() {
   );
   const monatlDifferenz = Math.max(0, monatsrateFinanzierung - warmmiete);
 
-  // Simulation Fondsguthaben + Inflationspreis für Eigenkapital%
+  // Simulation Fondsguthaben + Inflationspreis + Eigenkapital%
   const results = useMemo(() => {
-    const inflationsrate = 0.02; // 2% p.a. im Hintergrund
+    const inflationsrate = 0.02;
     const r_annual = (rendite || 0) / 100;
     const r_month = Math.pow(1 + r_annual, 1 / 12) - 1;
-    const kosten_month = (0.013 + 0.002) / 12; // 1,5% p.a. Kosten
+    const kosten_month = (0.013 + 0.002) / 12; // 1,5% p.a.
     const stueckkosten = 36;
 
     let fondsguthaben = 0;
@@ -285,17 +317,16 @@ export default function App() {
           fondsguthaben: Math.max(0, Math.round(fondsguthaben)),
           sparrate: Math.round(kumSparrate),
           inflKaufpreis: Math.round(inflKaufpreis),
-          eigenkapitalPct: Math.round(eigenkapitalPct * 10) / 10, // xx,x %
+          eigenkapitalPct: Math.round(eigenkapitalPct * 10) / 10,
         });
       }
     }
     return arr;
   }, [rendite, monatlDifferenz, kaufpreis]);
 
-  /* ===== PDF Export ===== */
+  /* ===== PDF Export (angepasst für neue Spalte) ===== */
   const exportPDF = () => {
     try {
-      // Seite 1 (Portrait)
       const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
       const drawHeader = (title) => {
         const pw = pdf.internal.pageSize.getWidth();
@@ -343,9 +374,9 @@ export default function App() {
         const tableX = margin;
         const tableW = pageWidth - margin * 2;
         const yearW = 52;
-        const fondW = Math.round((tableW - yearW) * 0.35);
-        const saveW = Math.round((tableW - yearW) * 0.33);
-        const eqW = tableW - yearW - fondW - saveW; // Eigenkapital%
+        const fondW = Math.round((tableW - yearW) * 0.30);
+        const saveW = Math.round((tableW - yearW) * 0.30);
+        const eqW = tableW - yearW - fondW - saveW;
         const headerH = 22;
         const rowH = 20;
 
@@ -397,7 +428,6 @@ export default function App() {
       const pw = pdf.internal.pageSize.getWidth();
       const m = 32;
 
-      // Kopfband
       pdf.setFillColor(190, 13, 62);
       pdf.rect(0, 0, pw, 64, "F");
       pdf.setTextColor(255, 255, 255);
@@ -405,7 +435,6 @@ export default function App() {
       pdf.setFontSize(16);
       pdf.text("Finanzieren auf Probe", pw / 2, 40, { align: "center" });
 
-      // Titel
       let y2 = 100;
       pdf.setTextColor(190, 13, 62);
       pdf.setFont("helvetica", "bold");
@@ -415,7 +444,6 @@ export default function App() {
       pdf.setTextColor(0);
       y2 += 30;
 
-      // Chart-Box
       const leftGutter = 72;
       const chartX = m + leftGutter;
       const chartY = y2;
@@ -433,7 +461,6 @@ export default function App() {
       const scaleX = results.length > 1 ? chartW / (results.length - 1) : 0;
       const scaleY = chartH / range;
 
-      // Y-Achse + Hilfslinien
       pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
       for (let val = 0; val <= maxVal; val += 50000) {
         const yy = chartY + chartH - (val - minVal) * scaleY;
@@ -442,7 +469,6 @@ export default function App() {
         pdf.setTextColor(60); pdf.text(nf.format(val), chartX - 10, yy + 3, { align: "right" });
       }
 
-      // X-Achse (Jahre)
       const xStep = Math.max(1, Math.ceil(results.length / 6));
       for (let i = 0; i < results.length; i += xStep) {
         const px = chartX + i * scaleX;
@@ -455,7 +481,6 @@ export default function App() {
       pdf.setFontSize(10); pdf.setTextColor(80);
       pdf.text("Jahre", chartX + chartW / 2, chartY + chartH + 30, { align: "center" });
 
-      // Linien
       pdf.setDrawColor(66, 126, 91); pdf.setLineWidth(2);
       results.forEach((r, i) => {
         const px = chartX + i * scaleX;
@@ -472,7 +497,6 @@ export default function App() {
       });
       if (results.length > 1) pdf.stroke();
 
-      // Legende
       const legendY = chartY + chartH + 50;
       pdf.setDrawColor(66, 126, 91); pdf.setLineWidth(3);
       pdf.line(m, legendY, m + 24, legendY);
@@ -488,13 +512,11 @@ export default function App() {
     }
   };
 
-  /* ===== Mailto-Helper (ohne automatischen Anhang) ===== */
   const mailWithSubjectBody = (subject, body) => {
     const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = url;
   };
 
-  /* ===== UI ===== */
   return (
     <div style={{ padding: 20, maxWidth: 1100, margin: "0 auto" }}>
       {/* Header */}
@@ -578,7 +600,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Hinweise – Wortlaut angepasst */}
+            {/* Hinweise */}
             <ul style={{ color: CI.grey, fontSize: 13, marginTop: 12, paddingLeft: 16 }}>
               <li>Deine spätere monatliche Finanzierungsrate: Zins + Tilgung (z. B. 3,5 % + 2,0 %)</li>
               <li>Deine monatliche Einzahlung (Sparrate): Finanzierungsrate minus Warmmiete</li>
@@ -589,7 +611,6 @@ export default function App() {
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
               <button style={btnSecondary} onClick={exportPDF}>PDF exportieren</button>
 
-              {/* Kontakt – Mailto ohne Auto-Anhang */}
               <button
                 style={btnPrimary}
                 onClick={() => mailWithSubjectBody(
@@ -612,7 +633,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Ergebnisse: Tabelle (mit 4. Spalte Eigenkapital %) */}
+          {/* Ergebnisse: Tabelle */}
           <div style={{ ...card }}>
             <h2 style={{ color: CI.red, margin: 0, marginBottom: 8, fontSize: 18 }}>Kapitalentwicklung (jährlich, bis 15 Jahre)</h2>
             <div style={{ overflowX: "auto" }}>
@@ -666,7 +687,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Footer Navigation */}
+      {/* Footer Navigation – Buttontext dynamisch */}
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14 }}>
         <button
           disabled={step === 1}
